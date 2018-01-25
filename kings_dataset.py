@@ -9,10 +9,11 @@ DEPTH = 3
 
 
 class KingsDataset(object):
-    def __init__(self, data_dir, subset='train', use_distortion=True):
+    def __init__(self, data_dir, subset='train', use_distortion=True, abs_and_rel=False):
         self.data_dir = data_dir
         self.subset = subset
         self.use_distortion = use_distortion
+        self.abs_and_rel = abs_and_rel
 
     def get_filenames(self):
         if self.subset in ['train', 'validation', 'test']:
@@ -57,7 +58,11 @@ class KingsDataset(object):
 
         image_batch = self.preprocess(image_batch)
 
-        return image_batch, labels_abs
+        if self.abs_and_rel:
+            labels_relabs = tf.concat([labels_rel, labels_abs], axis=1)
+            return image_batch, labels_relabs
+        else:
+            return image_batch, labels_abs
 
     def _image_augmentation(self, image, seed=42):
         # Perform additional preprocessing on the parsed data.
