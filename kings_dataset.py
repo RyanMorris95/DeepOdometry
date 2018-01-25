@@ -33,7 +33,8 @@ class KingsDataset(object):
         parsed = tf.parse_single_example(record, keys_to_features)
 
         image = tf.image.decode_jpeg(parsed["image"])
-        image = tf.reshape(image, [HEIGHT, WIDTH, 3])
+        image = tf.image.convert_image_dtype(image, tf.float32)
+        image = tf.reshape(image, [HEIGHT, WIDTH, 3])  # image will be in 1 - 0 format
         image = tf.image.resize_image_with_crop_or_pad(image, 1020, 1020)
 
         label_abs = tf.decode_raw(parsed["pose_abs"], tf.float64)
@@ -84,5 +85,7 @@ class KingsDataset(object):
         image = tf.divide(tf.subtract(image, 127.), 127.)
 
         return image
+
+
 
 

@@ -1,3 +1,8 @@
+'''
+FROM: https://github.com/openai/gradient-checkpointing/blob/master/memory_saving_gradients.py
+HUGE THANKS TO OPENAI FOR OPEN SOURCING THIS!
+'''
+
 from toposort import toposort
 import contextlib
 import numpy as np

@@ -8,34 +8,36 @@ import memory_saving_gradients
 from tensorflow.contrib.learn import ModeKeys
 from tensorflow.contrib.learn import learn_runner
 from kings_dataset import KingsDataset
-
-os.environ["TF_ENABLE_WINOGRAD_NONFUSED"] = '1'
+from scenes_dataset import ScenesDataset
 
 flags = tf.app.flags
 flags.DEFINE_string("dataset_dir", "/media/ryan/E4DE46CCDE4696A8/KingsCollege/", "Dataset directory")
 flags.DEFINE_string("optimizer", "adam", "Optimizer type")
 flags.DEFINE_string("loss", "l1", "type of norm loss")
-flags.DEFINE_string("save_dir", None, "Directory to save checkpoints")
+flags.DEFINE_string("save_dir", 'experiments/current_model', "Directory to save checkpoints")
 flags.DEFINE_float("grad_clip", None, "Gradient Norm Clipping")
 flags.DEFINE_float("learning_rate", 0.001, "learing rate of optimizer")
 flags.DEFINE_float("gpu_fraction", 1.0, "% usage of gpu")
-flags.DEFINE_integer("batch_size", 8, "The size of of a sample batch")
-flags.DEFINE_integer("img_height", 224, "Image height")
-flags.DEFINE_integer("img_width", 224, "Image width")
-flags.DEFINE_integer("train_size", 1219, "Size of training set")
-flags.DEFINE_integer("eval_size", 342, "Size of eval set")
+flags.DEFINE_integer("batch_size", 4, "The size of of a sample batch")
+flags.DEFINE_integer("target_height", 256, "Target Image height")
+flags.DEFINE_integer("target_width", 341, "Target Image width")
+flags.DEFINE_integer("train_size", 25609, "Size of training set")
+flags.DEFINE_integer("eval_size", 16000, "Size of eval set")
 flags.DEFINE_integer("epochs", 300, "Number of runs through dataset")
 flags.DEFINE_bool("abs_and_rel", True, "Combine absolute and relative pose losses")
 flags.DEFINE_bool("mem_save_grad", True, "Use memory saving gradients.")
 FLAGS = flags.FLAGS
 
+MEAN = [0.5001157, 0.4440133, 0.43354344]
+STD = [0.22229797, 0.23737237, 0.2185392]
+
 TRAIN_STEPS = int(FLAGS.train_size / FLAGS.batch_size)
 EVAL_STEPS = int(FLAGS.eval_size / FLAGS.batch_size)
-print("Train steps: ", str(TRAIN_STEPS))
+print("Train steps: ", str(TRAIN_STEPS*FLAGS.epochs))
 print("Eval steps: ", str(EVAL_STEPS))
 
 if FLAGS.mem_save_grad:
-    # monkey patch tf.gradients to point to our custom version, with automatic checkpoint selection
+    print ("")
     tf.__dict__["gradients"] = memory_saving_gradients.gradients_memory
 
 
@@ -45,9 +47,9 @@ def model_fn(features, labels, mode, params):
     is_training = mode == ModeKeys.TRAIN
     global_step = tf.train.get_global_step()
 
-    num_outputs = 7
+    num_outputs = 6
     if FLAGS.abs_and_rel:
-        num_outputs = 14
+        num_outputs = 12
 
     predictions = architectures.build_resnet34(features, num_output=num_outputs, is_training=is_training)
 
@@ -79,8 +81,8 @@ def model_fn(features, labels, mode, params):
 
         with tf.variable_scope('loss_abs'):
             if FLAGS.loss == 'l1':
-                loss_abs_trans = tf.reduce_mean(tf.losses.absolute_difference(label_abs_trans, pred_abs_trans))
-                loss_abs_quat = tf.reduce_mean(tf.losses.absolute_difference(label_abs_quat, pred_abs_quat))
+                loss_abs_trans = tf.reduce_sum(tf.losses.absolute_difference(label_abs_trans, pred_abs_trans))
+                loss_abs_quat = tf.reduce_sum(tf.losses.absolute_difference(label_abs_quat, pred_abs_quat))
             elif FLAGS.loss == 'l2':
                 loss_abs_trans = tf.losses.mean_squared_error(label_abs_trans, pred_abs_trans)
                 loss_abs_quat = tf.losses.mean_squared_error(label_abs_quat, pred_abs_quat)
@@ -94,8 +96,8 @@ def model_fn(features, labels, mode, params):
 
         if FLAGS.abs_and_rel:
             with tf.variable_scope('loss_rel'):
-                loss_rel_trans = tf.reduce_mean(tf.losses.absolute_difference(label_rel_trans, pred_rel_trans))
-                loss_rel_quat = tf.reduce_mean(tf.losses.absolute_difference(label_rel_quat, pred_rel_quat))
+                loss_rel_trans = tf.reduce_sum(tf.losses.absolute_difference(label_rel_trans, pred_rel_trans))
+                loss_rel_quat = tf.reduce_sum(tf.losses.absolute_difference(label_rel_quat, pred_rel_quat))
                 loss_rel = tf.add(loss_rel_quat, loss_rel_trans)
             loss = tf.add(loss, loss_rel, name='loss_absrel')
             tf.summary.scalar('loss_rel', loss_rel)
@@ -138,8 +140,12 @@ def model_fn(features, labels, mode, params):
 
 def input_fn(data_dir, subset, batch_size, use_distortion_for_training=True):
     with tf.device('/cpu:0'):
-        use_distortion = subset == 'train' and use_distortion_for_training
-        dataset = KingsDataset(data_dir, subset, use_distortion, abs_and_rel=FLAGS.abs_and_rel)
+        dataset = ScenesDataset(data_dir, subset=subset,
+                                abs_and_rel=FLAGS.abs_and_rel,
+                                target_height=FLAGS.target_height,
+                                target_width=FLAGS.target_width,
+                                mean=MEAN,
+                                std=STD)
         image_batch, label_batch = dataset.make_batch(batch_size)
         return image_batch, label_batch
 
@@ -166,15 +172,15 @@ def main(argv):
     """Run the training experiment."""
     # Define model parameters
     if FLAGS.abs_and_rel:
-        num_classes = 14
+        num_classes = 12
     else:
-        num_classes = 7
+        num_classes = 6
 
     params = tf.contrib.training.HParams(
         learning_rate=FLAGS.learning_rate,
         n_classes=num_classes,
         train_steps=TRAIN_STEPS * FLAGS.epochs,
-        min_eval_frequency=500
+        min_eval_frequency=TRAIN_STEPS * 10  # every 10 epochs evaluate
     )
 
     # Session config

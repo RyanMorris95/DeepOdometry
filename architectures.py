@@ -35,6 +35,14 @@ def build_sfmlearner(inputs, is_training, outputs, scope='sfmlearner'):
 
 
 def build_resnet34(inputs, is_training, num_output, scope='resnet34'):
+    """
+    Building the mapnet architecture from https://arxiv.org/pdf/1712.03342.pdf
+    :param inputs:
+    :param is_training:
+    :param num_output:
+    :param scope:
+    :return:
+    """
     import resnet
     with tf.variable_scope(scope):
         network = resnet.imagenet_resnet_v2(34, num_output)
