@@ -84,7 +84,7 @@ class ScenesDataset(object):
         if self.subset in 'train':
             image = self._image_augmentation(image, seed=42)
 
-        image = tf.divide(tf.subtract(image, MEAN), STD)
+        image = tf.divide(tf.subtract(image, self.mean), self.std)
         image = tf.image.resize_area(image, (self.target_height, self.target_width))
 
         return image

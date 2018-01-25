@@ -342,7 +342,7 @@ def imagenet_resnet_v2_generator(block_fn, layers, num_classes,
         inputs = tf.reshape(inputs,
                             [-1, 512 if block_fn is building_block else 2048])
         inputs = tf.layers.dense(inputs=inputs, units=2048, activation=tf.nn.relu)
-        inputs = tf.layers.Dropout(inputs=inputs, float=0.5, training=is_training)
+        inputs = tf.layers.dropout(inputs=inputs, rate=0.5, training=is_training)
         inputs = tf.layers.dense(inputs=inputs, units=num_classes, activation=None)
         inputs = tf.identity(inputs, 'final_dense')
         return inputs

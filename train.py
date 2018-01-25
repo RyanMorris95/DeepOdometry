@@ -37,7 +37,7 @@ print("Train steps: ", str(TRAIN_STEPS*FLAGS.epochs))
 print("Eval steps: ", str(EVAL_STEPS))
 
 if FLAGS.mem_save_grad:
-    print ("")
+    print ("Using OpenAI gradient checkpointing!")
     tf.__dict__["gradients"] = memory_saving_gradients.gradients_memory
 
 
