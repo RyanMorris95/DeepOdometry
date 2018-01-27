@@ -97,7 +97,7 @@ if __name__ == '__main__':
     STD = [0.22229797, 0.23737237, 0.2185392]
 
     scenes_dataset = ScenesDataset('/media/ryan/E4DE46CCDE4696A8/7-scenes/', subset='test',
-                                   mean=MEAN, std=STD, target_height=256, target_width=341)
+                                   mean=MEAN, std=STD, target_height=251, target_width=341)
     image_batch, image_labels = scenes_dataset.make_batch(1)
     means = []
     stds = []
@@ -110,6 +110,8 @@ if __name__ == '__main__':
             quat = labels[0, 3:7]
             u, v = quat[0], quat[1:4]
 
+            plt.imshow(img)
+            plt.show()
             log_q = np.dot(v/np.linalg.norm(v), np.arccos(u))
 
     ### FOR FINDING THE MEAN AND STD OF TRAINING SET

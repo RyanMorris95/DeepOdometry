@@ -19,17 +19,17 @@ def build_sfmlearner(inputs, is_training, outputs, scope='sfmlearner'):
                             weights_regularizer=slim.l2_regularizer(0.05),
                             activation_fn=tf.nn.relu):
             # cnv1 to cnv5b are shared between pose and explainability prediction
-            cnv1 = slim.conv2d(inputs, 16, [7, 7], stride=2, scope='cnv1')
-            cnv2 = slim.conv2d(cnv1, 32, [5, 5], stride=2, scope='cnv2')
-            cnv3 = slim.conv2d(cnv2, 64, [3, 3], stride=2, scope='cnv3')
-            cnv4 = slim.conv2d(cnv3, 128, [3, 3], stride=2, scope='cnv4')
-            cnv5 = slim.conv2d(cnv4, 256, [3, 3], stride=2, scope='cnv5')
+            cnv1 = slim.conv2d(inputs, 5, [7, 7], stride=2, scope='cnv1')
+            cnv2 = slim.conv2d(cnv1, 5, [5, 5], stride=2, scope='cnv2')
+            cnv3 = slim.conv2d(cnv2, 5, [3, 3], stride=2, scope='cnv3')
+            cnv4 = slim.conv2d(cnv3, 5, [3, 3], stride=2, scope='cnv4')
+            cnv5 = slim.conv2d(cnv4, 5, [3, 3], stride=2, scope='cnv5')
             # Pose specific layers
             with tf.variable_scope('pose'):
-                cnv6 = slim.conv2d(cnv5, 256, [3, 3], stride=2, scope='cnv6')
-                cnv7 = slim.conv2d(cnv6, 256, [3, 3], stride=2, scope='cnv7')
+                cnv6 = slim.conv2d(cnv5, 5, [3, 3], stride=2, scope='cnv6')
+                cnv7 = slim.conv2d(cnv6, 5, [3, 3], stride=2, scope='cnv7')
                 flat = slim.flatten(cnv7)
-                fc1 = slim.fully_connected(flat, 512, activation_fn=tf.nn.relu)
+                fc1 = slim.fully_connected(flat, 5, activation_fn=tf.nn.relu)
                 pose = slim.fully_connected(fc1, outputs)
     return pose
 

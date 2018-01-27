@@ -335,12 +335,7 @@ def imagenet_resnet_v2_generator(block_fn, layers, num_classes,
             data_format=data_format)
 
         inputs = batch_norm_relu(inputs, is_training, data_format)
-        inputs = tf.layers.average_pooling2d(
-            inputs=inputs, pool_size=7, strides=1, padding='VALID',
-            data_format=data_format)
-        inputs = tf.identity(inputs, 'final_avg_pool')
-        inputs = tf.reshape(inputs,
-                            [-1, 512 if block_fn is building_block else 2048])
+        inputs = tf.keras.layers.GlobalAvgPool2D()(inputs)
         inputs = tf.layers.dense(inputs=inputs, units=2048, activation=tf.nn.relu)
         inputs = tf.layers.dropout(inputs=inputs, rate=0.5, training=is_training)
         inputs = tf.layers.dense(inputs=inputs, units=num_classes, activation=None)

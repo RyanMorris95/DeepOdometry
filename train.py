@@ -11,14 +11,14 @@ from kings_dataset import KingsDataset
 from scenes_dataset import ScenesDataset
 
 flags = tf.app.flags
-flags.DEFINE_string("dataset_dir", "/media/ryan/E4DE46CCDE4696A8/KingsCollege/", "Dataset directory")
+flags.DEFINE_string("dataset_dir", "/media/ryan/E4DE46CCDE4696A8/7-scenes/", "Dataset directory")
 flags.DEFINE_string("optimizer", "adam", "Optimizer type")
 flags.DEFINE_string("loss", "l1", "type of norm loss")
-flags.DEFINE_string("save_dir", 'experiments/current_model', "Directory to save checkpoints")
+flags.DEFINE_string("save_dir", 'experiments/resnet', "Directory to save checkpoints")
 flags.DEFINE_float("grad_clip", None, "Gradient Norm Clipping")
 flags.DEFINE_float("learning_rate", 0.001, "learing rate of optimizer")
 flags.DEFINE_float("gpu_fraction", 1.0, "% usage of gpu")
-flags.DEFINE_integer("batch_size", 4, "The size of of a sample batch")
+flags.DEFINE_integer("batch_size", 2, "The size of of a sample batch")
 flags.DEFINE_integer("target_height", 256, "Target Image height")
 flags.DEFINE_integer("target_width", 341, "Target Image width")
 flags.DEFINE_integer("train_size", 25609, "Size of training set")
@@ -33,12 +33,10 @@ STD = [0.22229797, 0.23737237, 0.2185392]
 
 TRAIN_STEPS = int(FLAGS.train_size / FLAGS.batch_size)
 EVAL_STEPS = int(FLAGS.eval_size / FLAGS.batch_size)
+
 print("Train steps: ", str(TRAIN_STEPS*FLAGS.epochs))
 print("Eval steps: ", str(EVAL_STEPS))
-
-if FLAGS.mem_save_grad:
-    print ("Using OpenAI gradient checkpointing!")
-    tf.__dict__["gradients"] = memory_saving_gradients.gradients_memory
+tf.__dict__["gradients"] = memory_saving_gradients.gradients_memory
 
 
 def model_fn(features, labels, mode, params):
@@ -51,6 +49,7 @@ def model_fn(features, labels, mode, params):
     if FLAGS.abs_and_rel:
         num_outputs = 12
 
+    #predictions = architectures.build_sfmlearner(features, is_training=is_training, outputs=num_outputs)
     predictions = architectures.build_resnet34(features, num_output=num_outputs, is_training=is_training)
 
     if mode == tf.estimator.ModeKeys.PREDICT:
@@ -69,15 +68,15 @@ def model_fn(features, labels, mode, params):
         with tf.variable_scope('label_pred_sclicing'):
             predictions_rel, predictions_abs = tf.split(predictions, 2, axis=1)
             pred_abs_trans = tf.slice(predictions_abs, [0, 0], [-1, 3])
-            pred_abs_quat = tf.slice(predictions_abs, [0, 3], [-1, 4])
+            pred_abs_quat = tf.slice(predictions_abs, [0, 3], [-1, 3])
             pred_rel_trans = tf.slice(predictions_rel, [0, 0], [-1, 3])
-            pred_rel_quat = tf.slice(predictions_rel, [0, 3], [-1, 4])
+            pred_rel_quat = tf.slice(predictions_rel, [0, 3], [-1, 3])
 
             labels_rel, labels_abs = tf.split(labels, 2, axis=1)
             label_abs_trans = tf.slice(labels_abs, [0, 0], [-1, 3])
-            label_abs_quat = tf.slice(labels_abs, [0, 3], [-1, 4])
+            label_abs_quat = tf.slice(labels_abs, [0, 3], [-1, 3])
             label_rel_trans = tf.slice(labels_rel, [0, 0], [-1, 3])
-            label_rel_quat = tf.slice(labels_rel, [0, 3], [-1, 4])
+            label_rel_quat = tf.slice(labels_rel, [0, 3], [-1, 3])
 
         with tf.variable_scope('loss_abs'):
             if FLAGS.loss == 'l1':
@@ -185,6 +184,7 @@ def main(argv):
 
     # Session config
     config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
     config.gpu_options.per_process_gpu_memory_fraction = FLAGS.gpu_fraction
 
     # Set the run_config and the directory to save the model and stats
