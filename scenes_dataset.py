@@ -36,6 +36,7 @@ class ScenesDataset(object):
         parsed = tf.parse_single_example(record, keys_to_features)
 
         image = tf.image.decode_jpeg(parsed["image"])
+
         image = tf.reshape(image, [HEIGHT, WIDTH, 3])
         image = tf.image.convert_image_dtype(image, tf.float32)  # IMAGE BETWEEN 1 and 0
 
