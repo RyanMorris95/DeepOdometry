@@ -191,8 +191,8 @@ def build_kitti_sequences(directory, sequences, type='train', seq_length=100):
     import pykitti.odometry as odometry
     import itertools
     from transforms3d.euler import mat2euler
-
-    writer = tf.python_io.TFRecordWriter(type+'test.tfrecord')
+    total = 0
+    writer = tf.python_io.TFRecordWriter('/media/ryan/E4DE46CCDE4696A8/kitti_tfrecords/'+type+'.tfrecord')
     for sequence in sequences:
         print ("Sequence: ", sequence)
         dataset = odometry(directory, sequence)
@@ -205,7 +205,7 @@ def build_kitti_sequences(directory, sequences, type='train', seq_length=100):
                 print (i)
 
             img = dataset.gray(i)
-            if i == 500:
+            if i == 500000:
                 break
 
             img = cv2.resize(img, (1280, 384))
@@ -242,8 +242,10 @@ def build_kitti_sequences(directory, sequences, type='train', seq_length=100):
                 img_raw_prev = img_raw
                 img_prev = img
                 SE3_prev = SE3
-        if i == 500:
+                total += 1
+        if i == 500000:
             break
+    print ('Total Samples: ', total)
     writer.close()
 
 
@@ -262,8 +264,7 @@ if __name__ == '__main__':
     # build_7scenes_tfrecord(dir, train_sets, type='train')
     # build_7scenes_tfrecord(dir, test_sets, type='test')
     dir = '/media/ryan/UBUNTU 16_0/data_odometry_gray/dataset/'
-    train_sequences = ['00', '01', '02', '03', '04', '05',
-                       '06', '07']
-    test_sequences = ['08', '09', '10']
-    build_kitti_sequences(dir, train_sequences, type='train', seq_length=100)
-    build_kitti_sequences(dir, test_sequences, type='test', seq_length=100)
+    train_sequences = ['00', '01', '02', '08', '09']
+    test_sequences = ['03', '04', '05', '06', '07', '10']
+    build_kitti_sequences(dir, train_sequences, type='train', seq_length=20)
+    build_kitti_sequences(dir, test_sequences, type='test', seq_length=20)

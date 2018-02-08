@@ -80,7 +80,7 @@ slim = tf.contrib.slim
 def build_flownet(inputs, is_training, scope='flownet'):
     with slim.arg_scope([slim.conv2d, slim.conv2d_transpose],
                         # Only backprop this network if trainable
-                        trainable=False,
+                        trainable=True,
                         # He (aka MSRA) weight initialization
                         weights_initializer=slim.variance_scaling_initializer(),
                         activation_fn=LeakyReLU,

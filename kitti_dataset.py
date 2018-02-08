@@ -10,9 +10,9 @@ from transforms3d.quaternions import mat2quat
 HEIGHT = 384
 WIDTH = 1280
 DEPTH = 1
-LABELS_MEAN = [-6.21518091e-03, -1.47573257e-01,  8.69913651e+00, -3.79176804e-04,
- -6.33387960e-03,  5.41760422e-05]
-LABELS_STD = [0.58557173, 0.12169825, 4.13368954, 0.01016389, 0.15903259, 0.01407647]
+LABELS_MEAN = [ 1.68654529e-01, -3.36497239e-01,  1.85786224e+01,  5.75098885e-04,
+  2.16883295e-02,  1.72457594e-03] 
+LABELS_STD = [2.66941123,  0.51481087, 14.32043476,  0.01867875,  0.32007611,  0.0254444]
 
 
 def se3(r=np.eye(3), t=np.array([0, 0, 0])):
@@ -281,8 +281,8 @@ class KittiDataset(object):
         #         image_batch = tf.concat([image_batch, image_prev_batch], axis=3)
         #         image_concat_seq = tf.concat([image_concat_seq, image_batch], axis=0)
 
-        #labels_delta = tf.divide(tf.subtract(labels_delta, LABELS_MEAN), LABELS_STD)
-
+        labels_rel = tf.divide(tf.subtract(labels_rel, LABELS_MEAN), LABELS_STD)
+        #label_rel = tf.subtract(LABESL_MEAN)
         return image_concat_seq, labels_rel
 
     def _image_augmentation(self, image, seed=42):
@@ -316,66 +316,65 @@ if __name__ == '__main__':
     STD = [0, 0, 0]
 
     scenes_dataset = KittiDataset('/media/ryan/E4DE46CCDE4696A8/kitti_tfrecords/', subset='train')
-    image_batch, image_labels = scenes_dataset.make_batch(1, sequence_length=10)
+    image_batch, image_labels = scenes_dataset.make_batch(1, sequence_length=20)
     means = []
     stds = []
-    from autograd import grad
-    import tangent
-    with tf.Session() as sess:
-        for i in range(18500):
-            images, labels = sess.run([image_batch, image_labels])
-            print (images.shape)
-            img = images[0,:,:,0].reshape((images[0].shape[0], images[0].shape[1])).copy()
-
-            import _pickle as p
-            labels = np.array(labels)
-            with open('labels.p', 'wb') as fp:
-                p.dump(labels, fp)
-            labels = np.reshape(labels, (1, labels.shape[0], labels.shape[1]))
-            print (labels)
-            print (labels.shape)
-            abs_poses = compose_poses(labels.copy())
-            print (abs_poses.shape)
-            print ("Abs Poses")
-            print (abs_poses[0,-1,:])
-            print ("tf Poses")
-
-            plt.figure(1)
-            plt.imshow(img)
-            plt.title('Last image')
-            plt.figure(2)
-            img = images[-1,:,:,0].reshape((images[0].shape[0], images[0].shape[1])).copy()
-            plt.imshow(img)
-            plt.title('First image')
-            plt.show()
-
-    # ### FOR FINDING THE MEAN AND STD OF TRAINING SET
-    # labels_list = []
+    # from autograd import grad
+    # import tangent
     # with tf.Session() as sess:
-    #     for i in range(18500/10):
-    #         if i % 100 == 0:
-    #             print (i)
+    #     for i in range(18500):
     #         images, labels = sess.run([image_batch, image_labels])
-    #         img = images[0,:,:,0].reshape((images[0].shape[0], images[0].shape[1], 1)).copy()
-    #         mean = img.reshape(-1, img.shape[-1]).mean(0)
-    #         _std = img.reshape(-1, img.shape[-1]).std(0)
-    #         labels_list.append(labels[0].tolist())
-    #
-    #         means.append(mean.copy())
-    #         stds.append(_std.copy())
-    #
-    # labels_arr = np.array(labels_list)
-    # from sklearn.preprocessing import StandardScaler
-    # scaler = StandardScaler().fit(labels_arr)
-    # print (scaler.mean_, scaler.scale_, scaler.var_)
-    #
-    # means = np.array(means)
-    # stds = np.array(stds)
-    #
-    # import pickle as p
-    # with open('tmp.p', 'wb') as fp:
-    #     p.dump([means, stds], fp)
-    #
-    # final_mean = means.reshape(-1, means.shape[-1]).mean(0)
-    # final_stds = stds.reshape(-1, stds.shape[-1]).mean(0)
-    # print (final_mean, final_stds)
+    #         print (images.shape)
+    #         img = images[0,:,:,0].reshape((images[0].shape[0], images[0].shape[1])).copy()
+
+    #         import _pickle as p
+    #         labels = np.array(labels)
+            
+    #         labels = np.reshape(labels, (1, labels.shape[0], labels.shape[1]))
+    #         print (labels)
+    #         print (labels.shape)
+    #         abs_poses = compose_poses(labels.copy())
+    #         print (abs_poses.shape)
+    #         print ("Abs Poses")
+    #         print (abs_poses[0,-1,:])
+    #         print ("tf Poses")
+
+    #         plt.figure(1)
+    #         plt.imshow(img)
+    #         plt.title('Last image')
+    #         plt.figure(2)
+    #         img = images[-1,:,:,0].reshape((images[0].shape[0], images[0].shape[1])).copy()
+    #         plt.imshow(img)
+    #         plt.title('First image')
+    #         plt.show()
+
+    ### FOR FINDING THE MEAN AND STD OF TRAINING SET
+    labels_list = []
+    with tf.Session() as sess:
+        for i in range(int(15960/20)):
+            if i % 100 == 0:
+                print (i)
+            images, labels = sess.run([image_batch, image_labels])
+            img = images[0,:,:,0].reshape((images[0].shape[0], images[0].shape[1], 1)).copy()
+            mean = img.reshape(-1, img.shape[-1]).mean(0)
+            _std = img.reshape(-1, img.shape[-1]).std(0)
+            labels_list.append(labels[-1].tolist())
+    
+            means.append(mean.copy())
+            stds.append(_std.copy())
+    
+    labels_arr = np.array(labels_list)
+    from sklearn.preprocessing import StandardScaler
+    scaler = StandardScaler().fit(labels_arr)
+    print (scaler.mean_, scaler.scale_, scaler.var_)
+    
+    means = np.array(means)
+    stds = np.array(stds)
+    
+    import pickle as p
+    with open('tmp.p', 'wb') as fp:
+        p.dump([means, stds], fp)
+    
+    final_mean = means.reshape(-1, means.shape[-1]).mean(0)
+    final_stds = stds.reshape(-1, stds.shape[-1]).mean(0)
+    print (final_mean, final_stds)

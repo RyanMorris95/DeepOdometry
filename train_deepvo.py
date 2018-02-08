@@ -21,15 +21,15 @@ flags.DEFINE_float("gpu_fraction", 1.0, "% usage of gpu")
 flags.DEFINE_integer("batch_size", 1, "The size of of a sample batch")
 flags.DEFINE_integer("target_height", 64, "Target Image height")
 flags.DEFINE_integer("target_width", 208, "Target Image width")
-flags.DEFINE_integer("train_size", 18500, "Size of training set")
-flags.DEFINE_integer("eval_size", 2500, "Size of eval set")
-flags.DEFINE_integer("epochs", 300, "Number of runs through dataset")
-flags.DEFINE_integer("seq_length", 50, "Sequence Length")
+flags.DEFINE_integer("train_size", 15960, "Size of training set")
+flags.DEFINE_integer("eval_size", 7230, "Size of eval set")
+flags.DEFINE_integer("epochs", 100, "Number of runs through dataset")
+flags.DEFINE_integer("seq_length", 20, "Sequence Length")
 flags.DEFINE_bool("mem_save_grad", True, "Use memory saving gradients.")
 FLAGS = flags.FLAGS
 
-MEAN = [-0.2785895]
-STD = [0.5659573]
+MEAN = [-0.14064756]
+STD = [0.2851444]
 
 TRAIN_STEPS = int(FLAGS.train_size / (FLAGS.batch_size*FLAGS.seq_length))
 EVAL_STEPS = int(FLAGS.eval_size / (FLAGS.batch_size*FLAGS.seq_length))
@@ -60,8 +60,15 @@ def model_fn(features, labels, mode, params):
     if mode == tf.estimator.ModeKeys.PREDICT:
         return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions)
 
-    eval_metric_ops = {"rmse": tf.metrics.root_mean_squared_error(tf.cast(labels, tf.float64),
-                                                                  tf.cast(predictions, tf.float64))}
+
+    with tf.variable_scope('label_pred_sclicing'):
+        pred_trans, pred_rot = tf.split(predictions, 2, axis=1)
+        label_trans, label_rot = tf.split(labels, 2, axis=1)
+
+    eval_metric_ops = {"rmse_trans": tf.metrics.root_mean_squared_error(tf.cast(label_trans, tf.float64),
+                                                                  tf.cast(pred_trans, tf.float64)),
+                        "rmse_rot": tf.metrics.root_mean_squared_error(tf.cast(label_rot, tf.float64),
+                                                                  tf.cast(pred_rot, tf.float64))}
     loss = None
     train_op = None
     train_hooks = None
@@ -75,9 +82,6 @@ def model_fn(features, labels, mode, params):
         sx = tf.Variable(0, dtype=tf.float32, name='optimal_trans_weight')
         sq = tf.Variable(-3, dtype=tf.float32, name='optimal_rot_weight')
 
-        with tf.variable_scope('label_pred_sclicing'):
-            pred_trans, pred_rot = tf.split(predictions, 2, axis=1)
-            label_trans, label_rot = tf.split(labels, 2, axis=1)
 
         with tf.variable_scope('calc_loss'):
             if FLAGS.loss == 'l1':
@@ -111,13 +115,15 @@ def model_fn(features, labels, mode, params):
         tf.summary.scalar('lr', lr)
         tf.summary.scalar('optimal_trans_weight', sx)
         tf.summary.scalar('optimal_rot_weight', sq)
+        #ux, uy, uz, urx, ury, urz = tf.split(uncertainty, 6)
         #tf.summary.scalar('uncertainty', uncertainty)
+
 
         for var in tf.trainable_variables():
             tf.summary.histogram(var.name, var)
 
         tensors_to_log = {'loss': loss}
-        logging_hook = tf.train.LoggingTensorHook(tensors=tensors_to_log, every_n_iter=100)
+        logging_hook = tf.train.LoggingTensorHook(tensors=tensors_to_log, every_n_iter=10)
         train_hooks = [logging_hook]
 
     return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions, loss=loss,
